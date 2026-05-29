@@ -367,18 +367,10 @@ local function runBuy()
                 status = 'Traveling to Guild Lobby...'
                 mq.cmd('/easyfind guildlobby')
                 mq.delay(1000)
-                local waited = 0
-                while mq.TLO.Zone.ShortName() ~= 'guildlobby' and waited < 30000 do
+                while (mq.TLO.Zone.ShortName() or '') ~= 'guildlobby' do
                     mq.delay(500)
-                    waited = waited + 500
                 end
-                if mq.TLO.Zone.ShortName() ~= 'guildlobby' then
-                    tbPrint('\arFailed to zone to Guild Lobby.')
-                    status = 'Zone failed'
-                    running = false
-                    return
-                end
-                mq.delay(1000)
+                mq.delay(2000)
             end
 
             status = 'Navigating to reagent vendor...'
