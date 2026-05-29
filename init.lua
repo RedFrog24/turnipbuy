@@ -1,7 +1,8 @@
 -- init.lua
 -- Created by: RedFrog
 -- Original creation date: 3/04/2023
--- Version: 0.18
+-- Version: 0.19
+-- 0.19: Bone Chips (NEC/SHD) via Guild Lobby; reagent buy target capped at 20 (axes stack 100 on EMU)
 -- 0.18: Player standing position for nav (not NPC coords); reagent buying (MAG/ENC/BER); autorun arg for group mode
 -- 0.17: Group mode sends DanNet commands at each buy step (nav/target/open/buy/close) - no script needed on members
 -- 0.16: Group toggle (animated grey-to-green, right-aligned on Run line); DanNet /dgge fires group on Run
@@ -17,7 +18,7 @@
 local mq    = require('mq')
 local imgui = require('ImGui')
 
-local VERSION = '0.18'
+local VERSION = '0.19'
 
 -- State
 local showUI   = true
@@ -44,8 +45,9 @@ local defaults = {
 
 -- Reagent vendor standing positions (hardcoded — standard PoK on Live and EMU)
 local REAGENT_VENDORS = {
-    darius = { name = 'Darius Gandril', navY =  52.24, navX = 1517.65, navZ = -124.68 },
-    gaddi  = { name = 'Gaddi Buruca',   navY = -83.84, navX =  810.87, navZ =    3.31 },
+    darius  = { name = 'Darius Gandril',      zone = 'poknowledge', navY =  52.24, navX = 1517.65, navZ = -124.68 },
+    gaddi   = { name = 'Gaddi Buruca',         zone = 'poknowledge', navY = -83.84, navX =  810.87, navZ =    3.31 },
+    bonechips = { name = 'A Vendor of Reagents', zone = 'guildlobby',  navY = 358.12, navX = -192.20, navZ =    0.09 },
 }
 
 local THEME_NAMES = { 'Default', 'Burnt', 'Lime', 'MonoChrome', 'Grape', 'Red' }
@@ -241,7 +243,7 @@ end
 
 -- Buy Logic
 
-local function buyItem(itemName)
+local function buyItem(itemName, targetOverride)
     local stackSize = getStackSize(itemName)
 
     mq.TLO.Merchant.SelectItem('=' .. itemName)()
@@ -257,7 +259,7 @@ local function buyItem(itemName)
         stackSize = mq.TLO.Merchant.SelectedItem.StackSize() or 20
     end
 
-    local target  = settings.targetStacks * stackSize
+    local target  = targetOverride or (settings.targetStacks * stackSize)
     local current = getCount(itemName)
     local deficit = math.max(0, target - current)
 
@@ -354,9 +356,31 @@ local function runBuy()
         elseif class == 'BER' then
             reagentItem   = getBerserkerAxeComponent()
             reagentVendor = REAGENT_VENDORS.gaddi
+        elseif class == 'NEC' or class == 'SHD' then
+            reagentItem   = 'Bone Chips'
+            reagentVendor = REAGENT_VENDORS.bonechips
         end
 
         if reagentItem and reagentVendor then
+            -- Zone to Guild Lobby if vendor is there and we're not already
+            if reagentVendor.zone == 'guildlobby' and mq.TLO.Zone.ShortName() ~= 'guildlobby' then
+                status = 'Traveling to Guild Lobby...'
+                mq.cmd('/easyfind guildlobby')
+                mq.delay(1000)
+                local waited = 0
+                while mq.TLO.Zone.ShortName() ~= 'guildlobby' and waited < 30000 do
+                    mq.delay(500)
+                    waited = waited + 500
+                end
+                if mq.TLO.Zone.ShortName() ~= 'guildlobby' then
+                    tbPrint('\arFailed to zone to Guild Lobby.')
+                    status = 'Zone failed'
+                    running = false
+                    return
+                end
+                mq.delay(1000)
+            end
+
             status = 'Navigating to reagent vendor...'
             mq.cmdf('/squelch /nav loc %.2f, %.2f, %.2f', reagentVendor.navY, reagentVendor.navX, reagentVendor.navZ)
             mq.delay(500)
@@ -372,7 +396,7 @@ local function runBuy()
                 mq.cmd('/click right target')
                 mq.delay(1500)
                 if mq.TLO.Merchant.Open() then
-                    buyItem(reagentItem)
+                    buyItem(reagentItem, 20)
                     mq.cmd('/notify MerchantWnd MW_Done_Button leftmouseup')
                     mq.delay(500)
                 else
@@ -556,6 +580,7 @@ local function renderGUI()
             if imgui.IsItemHovered() then
                 imgui.BeginTooltip()
                 imgui.Text('MAG: Malachite  ENC: Tiny Dagger  BER: Axe Components (by level)')
+                imgui.Text('NEC/SHD: Bone Chips (Live only - Guild Lobby vendor, no EMU equivalent)')
                 imgui.EndTooltip()
             end
 
