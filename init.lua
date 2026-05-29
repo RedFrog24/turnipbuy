@@ -1,7 +1,8 @@
 -- init.lua
 -- Created by: RedFrog
 -- Original creation date: 3/04/2023
--- Version: 0.20
+-- Version: 0.21
+-- 0.21: Testing for Frostreaver
 -- 0.20: Testing release
 -- 0.19: Bone Chips (NEC/SHD) via Guild Lobby; reagent buy target capped at 20 (axes stack 100 on EMU)
 -- 0.18: Player standing position for nav (not NPC coords); reagent buying (MAG/ENC/BER); autorun arg for group mode
@@ -19,7 +20,7 @@
 local mq    = require('mq')
 local imgui = require('ImGui')
 
-local VERSION = '0.20'
+local VERSION = '0.21'
 
 -- State
 local showUI   = true
