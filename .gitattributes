@@ -1,0 +1,4 @@
+# Keep CI/dev files out of the release zip (git archive honors export-ignore).
+# Users get exactly: turnipbuy/init.lua
+.github export-ignore
+.gitattributes export-ignore
